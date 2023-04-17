@@ -1,4 +1,4 @@
-tool
+@tool
 extends EditorPlugin
 
 var dock=null;
@@ -9,11 +9,11 @@ var objects:={};
 var editorSelection=get_editor_interface().get_selection();
 
 func _enter_tree() -> void:
-	dock=preload("res://addons/sparrowatlas_editor/source/dock.tscn").instance();
+	dock=preload("res://addons/sparrowatlas_editor/source/dock.tscn").instantiate();
 	dock.name="SparrowAtlas"
 	add_control_to_dock(EditorPlugin.DOCK_SLOT_LEFT_UL,dock);
 	
-	editorSelection.connect("selection_changed",self,"OnEditorSelectionChanged");
+	editorSelection.connect("selection_changed", Callable(self, "OnEditorSelectionChanged"));
 	objects["spritePath"]=dock.get_node("Panel/SpritePath");
 	objects["apply"]=dock.get_node("Panel/Apply");
 	objects["apply1"]=dock.get_node("Panel/Apply1");
@@ -35,11 +35,11 @@ func _enter_tree() -> void:
 		var obj=objects[key];
 		if obj!=null:
 			if obj.get_class()=="Button":
-				if not obj.is_connected("pressed",self,"OnButtonPressed"):
-					obj.connect("pressed",self,"OnButtonPressed",[obj.name]);
+				if not obj.is_connected("pressed", Callable(self, "OnButtonPressed")):
+					obj.connect("pressed", Callable(self, "OnButtonPressed").bind(obj.name));
 	
-	objects["prefix"].connect("text_changed",self,"PrefixChanged");
-	objects["animIndex"].connect("value_changed",self,"OnIndexChanged");
+	objects["prefix"].connect("text_changed", Callable(self, "PrefixChanged"));
+	objects["animIndex"].connect("value_changed", Callable(self, "OnIndexChanged"));
 	ToggleEditor(false);
 	pass
 
@@ -80,9 +80,9 @@ func Notification(what,data):
 
 func OnEditorSelectionChanged():
 	var nodes=editorSelection.get_selected_nodes();
-	if not nodes.empty():
+	if not nodes.is_empty():
 		var node=nodes[0];
-		if node.get_class()=="Sprite":
+		if node.get_class()=="Sprite2D":
 			ToggleEditor(true);
 			objects["target"]=node;
 			print("target: ",objects["target"])
@@ -119,18 +119,19 @@ func OnButtonPressed(id):
 			if dock!=null:
 				var spritePath=objects["spritePath"].text;
 				var sheetPath=objects["sheetPath"].text;
-				var newSprite=File.new();
-				var newSheet=File.new();
 				
 				spritePath=str(spritePath).replace('\\',"/");
 				sheetPath=str(sheetPath).replace('\\',"/");
 				
-				if newSprite.file_exists(spritePath):
+				var newSprite=FileAccess.open(spritePath,FileAccess.READ);
+				var newSheet=FileAccess.open(sheetPath,FileAccess.READ);
+				
+				if FileAccess.file_exists(spritePath):
 					newSprite=load(spritePath);
 				else:
 					newSprite=null;
 
-				if newSheet.file_exists(sheetPath):
+				if FileAccess.file_exists(sheetPath):
 					newSheet=ConvertXML(sheetPath);
 				else:
 					newSheet=null;
@@ -148,9 +149,11 @@ func OnButtonPressed(id):
 			var filePathResponse:=false;
 			objects["filePath"].popup();
 			
-			yield(objects["filePath"],"popup_hide");
-	
-			if not objects["filePath"].get_ok():
+			objects["filePath"].current_file = objects["name"].text
+			
+			await objects["filePath"].confirmed;
+			
+			if not objects["filePath"].get_ok_button():
 				print("Couldn't export the new animation properly.");
 				return;
 			print("Exported the new animation successfully.")
@@ -170,8 +173,8 @@ func OnButtonPressed(id):
 					
 					newAnim.track_insert_key(newTrackRect,index*0.5,targetCrop,0);
 					newAnim.track_insert_key(newTrackOffset,index*0.5,targetOffset,0);
-		
-				ResourceSaver.save(str(objects["filePath"].current_path)+objects["name"].text+".tres",newAnim)
+				
+				ResourceSaver.save(newAnim,(objects["filePath"].current_path)+".tres")
 			pass;
 			
 		
@@ -181,9 +184,10 @@ func PrefixChanged(newPrefix):
 	animation=[];
 	if newPrefix!="":
 		var newFrames:=[];
-		for frame in sheet:
-			if str(frame.name).begins_with(newPrefix):
-				newFrames.append(frame);
+		if not sheet == null:
+			for frame in sheet:
+				if str(frame.name).begins_with(newPrefix):
+					newFrames.append(frame);
 		animation=newFrames;
 		Notification("NewAnimation",{});
 	else:
