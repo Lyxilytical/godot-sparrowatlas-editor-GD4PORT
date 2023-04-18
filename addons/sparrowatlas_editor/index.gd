@@ -85,7 +85,6 @@ func OnEditorSelectionChanged():
 		if node.get_class()=="Sprite2D":
 			ToggleEditor(true);
 			objects["target"]=node;
-			print("target: ",objects["target"])
 		else:
 			ToggleEditor(false);
 
