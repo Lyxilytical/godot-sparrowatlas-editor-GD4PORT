@@ -56,8 +56,9 @@ func Notification(what,data):
 				if animation.size()>0:
 					frame=animation[objects["animIndex"].value];
 					
-				var spriteCrop=Rect2(int(frame.x),int(frame.y),int(frame.width),int(frame.height));
+				var spriteCrop=Rect2(int(frame.x),int(frame.y),int(frame.frameWidth),int(frame.frameHeight));
 				var obj=objects["target"];
+
 				if obj!=null:
 					obj.texture=sprite;
 					obj.region_enabled=true;
@@ -202,7 +203,7 @@ func OnIndexChanged(val):
 			objects["titleFrames"].text=str(val,"/",sheet.size()-1)
 	
 func ConvertXML(path):
-	var entries:=["name","width","height","frameX","frameY","x","y"];
+	var entries:=["name","width","height","frameX","frameY","frameWidth","frameHeight","x","y"];
 	var file=XMLParser.new();
 	var result=[];
 	file.open(path);
